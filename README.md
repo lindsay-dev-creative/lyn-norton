@@ -2,7 +2,7 @@
 
 Brand name availability research.
 
-`domain-handle-availability.html` is a sortable table of 42 candidate names showing
+`brand-name-availability.html` is a sortable table of 42 candidate names showing
 Namecheap registration pricing and Instagram handle status, checked 18 August 2026.
 
 - Domain pricing scraped from Namecheap live search results
