@@ -47,7 +47,7 @@
   .ctrlrow button .arrow { font-size:10px; opacity:.85; }
   .ctrlrow .sep { width:1px; align-self:stretch; background:var(--line); margin:0 .35rem; }
   .ctrlrow button.toggle[aria-pressed="true"] {
-    background:var(--no-bg); color:var(--no); border-color:var(--no);
+    background:var(--accent); color:var(--bg); border-color:var(--accent);
   }
   .count {
     margin-left:auto; color:var(--muted);
@@ -115,7 +115,7 @@
       <button data-filter="domain" aria-pressed="false">Domain available</button>
       <button data-filter="handle" aria-pressed="false">Handle available</button>
       <span class="sep" aria-hidden="true"></span>
-      <button id="interior-toggle" class="toggle" aria-pressed="false">Hide &ldquo;interior&rdquo; names</button>
+      <button id="interior-toggle" class="toggle" aria-pressed="false">Only &ldquo;interior&rdquo; names</button>
       <span class="count" id="count" aria-live="polite"></span>
     </div>
   </div>
@@ -202,7 +202,7 @@
 
   var activeSort = 'default';
   var activeFilter = 'all';
-  var hideInterior = false;
+  var onlyInterior = false;
   var interiorBtn = document.getElementById('interior-toggle');
   var dirs = { 'default': 1, 'domain': 1, 'price': 1, 'dom': 1, 'ig': 1 };
 
@@ -232,7 +232,7 @@
         || (activeFilter === 'both' && r.dataset.dom === '0' && r.dataset.ig === '0')
         || (activeFilter === 'domain' && r.dataset.dom === '0')
         || (activeFilter === 'handle' && r.dataset.ig === '0');
-      if (hideInterior && r.dataset.interior === '1') ok = false;
+      if (onlyInterior && r.dataset.interior !== '1') ok = false;
       r.classList.toggle('hide', !ok);
       if (ok) shown++;
     });
@@ -246,8 +246,7 @@
       var a = b.querySelector('.arrow');
       if (a) a.textContent = mine ? (dirs[activeSort] === 1 ? '▲' : '▼') : '';
     });
-    interiorBtn.setAttribute('aria-pressed', hideInterior ? 'true' : 'false');
-    interiorBtn.innerHTML = (hideInterior ? 'Show' : 'Hide') + ' “interior” names';
+    interiorBtn.setAttribute('aria-pressed', onlyInterior ? 'true' : 'false');
     filterBtns.forEach(function (b) {
       b.setAttribute('aria-pressed', b.getAttribute('data-filter') === activeFilter ? 'true' : 'false');
     });
@@ -276,7 +275,7 @@
   });
 
   interiorBtn.addEventListener('click', function () {
-    hideInterior = !hideInterior;
+    onlyInterior = !onlyInterior;
     render();
   });
 
