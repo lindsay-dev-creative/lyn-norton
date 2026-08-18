@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Brand Name Availability</title>
+<style>
+  :root {
+    --bg:#faf9f7; --panel:#fff; --ink:#1c1a17; --muted:#6f6a63; --line:#e6e2dc;
+    --yes:#1d7a4f; --yes-bg:#e6f4ec; --no:#a03328; --no-bg:#fbeae7;
+    --prem:#8a6412; --prem-bg:#fbf1dc; --unk:#5d6470; --unk-bg:#eef0f3;
+    --accent:#1c1a17;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg:#141311; --panel:#1c1a18; --ink:#f2efe9; --muted:#a09a91; --line:#2f2c28;
+      --yes:#67d19b; --yes-bg:#16301f; --no:#f0958a; --no-bg:#3a201c;
+      --prem:#e5bd6a; --prem-bg:#3a2f16; --unk:#a8b0bb; --unk-bg:#26292e;
+      --accent:#f2efe9;
+    }
+  }
+  * { box-sizing:border-box; }
+  body {
+    margin:0; padding:2.5rem 1.25rem 4rem;
+    background:var(--bg); color:var(--ink);
+    font:400 15px/1.55 "Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap { max-width:1040px; margin:0 auto; }
+  header { margin-bottom:.5rem; }
+  h1 { font-size:1.9rem; line-height:1.15; margin:0; letter-spacing:-.01em; }
+  .toolbar { margin:1.5rem 0 .6rem; display:flex; flex-direction:column; gap:.55rem; }
+  .ctrlrow { display:flex; align-items:center; gap:.4rem; flex-wrap:wrap; }
+  .ctrlrow > .lbl {
+    font:600 11px/1.2 ui-sans-serif,-apple-system,"Segoe UI",sans-serif;
+    letter-spacing:.09em; text-transform:uppercase; color:var(--muted);
+    min-width:3.6rem;
+  }
+  .ctrlrow button {
+    font:500 13px/1 ui-sans-serif,-apple-system,"Segoe UI",sans-serif;
+    padding:.5rem .8rem; border-radius:999px; cursor:pointer;
+    border:1px solid var(--line); background:var(--panel); color:var(--muted);
+    display:inline-flex; align-items:center; gap:.35rem;
+  }
+  .ctrlrow button:hover { border-color:var(--muted); color:var(--ink); }
+  .ctrlrow button[aria-pressed="true"] { background:var(--accent); color:var(--bg); border-color:var(--accent); }
+  .ctrlrow button .arrow { font-size:10px; opacity:.85; }
+  .count {
+    margin-left:auto; color:var(--muted);
+    font:500 12.5px/1 ui-sans-serif,-apple-system,"Segoe UI",sans-serif;
+  }
+  th.sortable { padding:0; }
+  th.sortable button {
+    width:100%; text-align:left; background:none; border:0; cursor:pointer;
+    padding:.85rem 1rem; color:inherit; font:inherit;
+    letter-spacing:inherit; text-transform:inherit;
+    display:flex; align-items:center; gap:.35rem;
+  }
+  th.sortable button:hover { color:var(--ink); }
+  th.sortable .arrow { font-size:9px; opacity:0; }
+  th[aria-sort] .arrow { opacity:1; }
+  .empty td { text-align:center; color:var(--muted); padding:2rem 1rem; }
+  .tablewrap { overflow-x:auto; border:1px solid var(--line); border-radius:12px; background:var(--panel); }
+  table { width:100%; border-collapse:collapse; min-width:640px; }
+  th, td { text-align:left; padding:.85rem 1rem; border-bottom:1px solid var(--line); vertical-align:top; }
+  th {
+    font:600 11px/1.2 ui-sans-serif,-apple-system,"Segoe UI",sans-serif;
+    letter-spacing:.09em; text-transform:uppercase; color:var(--muted);
+    position:sticky; top:0; background:var(--panel); z-index:1;
+  }
+  tbody tr:last-child td { border-bottom:0; }
+  tbody tr.hide { display:none; }
+  tbody tr.both { background:linear-gradient(90deg, var(--yes-bg), transparent 65%); }
+  td.dom { font-weight:600; letter-spacing:-.005em; white-space:nowrap; }
+  .star { color:var(--yes); margin-left:.25rem; }
+  .pill {
+    display:inline-block; padding:.16rem .5rem; border-radius:999px;
+    font:600 11px/1.4 ui-sans-serif,-apple-system,"Segoe UI",sans-serif;
+    letter-spacing:.03em; margin-right:.45rem; vertical-align:1px;
+  }
+  .pill-yes { color:var(--yes); background:var(--yes-bg); }
+  .pill-no { color:var(--no); background:var(--no-bg); }
+  .pill-prem { color:var(--prem); background:var(--prem-bg); }
+  .pill-unk { color:var(--unk); background:var(--unk-bg); }
+  .price { font-weight:700; font-variant-numeric:tabular-nums; }
+  .handle { font:500 13px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace; color:var(--ink); }
+  .sub { display:block; color:var(--muted); font-size:12.5px; margin-top:.2rem; }
+  footer { margin-top:1.5rem; color:var(--muted); font-size:12.5px; max-width:72ch; }
+  footer p { margin:.5rem 0; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Brand Name Availability</h1>
+  </header>
+
+  <div class="toolbar">
+    <div class="ctrlrow" role="group" aria-label="Sort the table">
+      <span class="lbl">Sort</span>
+      <button data-sort="default" aria-pressed="true">Best matches <span class="arrow"></span></button>
+      <button data-sort="domain" aria-pressed="false">Domain name <span class="arrow"></span></button>
+      <button data-sort="price" aria-pressed="false">Price <span class="arrow"></span></button>
+      <button data-sort="dom" aria-pressed="false">Domain status <span class="arrow"></span></button>
+      <button data-sort="ig" aria-pressed="false">Handle status <span class="arrow"></span></button>
+    </div>
+    <div class="ctrlrow" role="group" aria-label="Filter the table">
+      <span class="lbl">Show</span>
+      <button data-filter="all" aria-pressed="true">All</button>
+      <button data-filter="both" aria-pressed="false">Both available</button>
+      <button data-filter="domain" aria-pressed="false">Domain available</button>
+      <button data-filter="handle" aria-pressed="false">Handle available</button>
+      <span class="count" id="count" aria-live="polite"></span>
+    </div>
+  </div>
+
+  <div class="tablewrap">
+    <table>
+      <thead>
+        <tr>
+          <th scope="col" class="sortable" id="th-domain"><button type="button" data-sort="domain">Domain Name <span class="arrow"></span></button></th>
+          <th scope="col" class="sortable" id="th-price"><button type="button" data-sort="price">Total Domain Price <span class="arrow"></span></button></th>
+          <th scope="col" class="sortable" id="th-ig"><button type="button" data-sort="ig">Instagram Handle Availability <span class="arrow"></span></button></th>
+        </tr>
+      </thead>
+      <tbody id="tb">
+        <tr class="both" data-order="0" data-dom="0" data-price="5.98" data-ig="0" data-domain="meredithinteriors.co"><td class="dom">meredithinteriors.co <span class="star" title="Domain and handle are both free">&#9733;</span></td><td class="p yes"><span class="price">$5.98/yr</span><span class="sub">Retail $38.48/yr</span></td><td class="ig"><span class="pill pill-yes">Available</span><span class="handle">@meredithinteriors</span></td></tr>
+        <tr class="both" data-order="1" data-dom="0" data-price="11.28" data-ig="0" data-domain="classicmeredith.com"><td class="dom">classicmeredith.com <span class="star" title="Domain and handle are both free">&#9733;</span></td><td class="p yes"><span class="price">$11.28/yr</span><span class="sub">Retail $14.98/yr</span></td><td class="ig"><span class="pill pill-yes">Available</span><span class="handle">@classicmeredith</span></td></tr>
+        <tr class="both" data-order="2" data-dom="0" data-price="11.28" data-ig="0" data-domain="meredithcollab.com"><td class="dom">meredithcollab.com <span class="star" title="Domain and handle are both free">&#9733;</span></td><td class="p yes"><span class="price">$11.28/yr</span><span class="sub">Retail $14.98/yr</span></td><td class="ig"><span class="pill pill-yes">Available</span><span class="handle">@meredithcollab</span></td></tr>
+        <tr class="both" data-order="3" data-dom="0" data-price="11.28" data-ig="0" data-domain="meredithcurations.com"><td class="dom">meredithcurations.com <span class="star" title="Domain and handle are both free">&#9733;</span></td><td class="p yes"><span class="price">$11.28/yr</span><span class="sub">Retail $14.98/yr</span></td><td class="ig"><span class="pill pill-yes">Available</span><span class="handle">@meredithcurations</span></td></tr>
+        <tr class="both" data-order="4" data-dom="0" data-price="11.28" data-ig="0" data-domain="meredithdesigngroup.com"><td class="dom">meredithdesigngroup.com <span class="star" title="Domain and handle are both free">&#9733;</span></td><td class="p yes"><span class="price">$11.28/yr</span><span class="sub">Retail $14.98/yr</span></td><td class="ig"><span class="pill pill-yes">Available</span><span class="handle">@meredithdesigngroup</span></td></tr>
+        <tr class="both" data-order="5" data-dom="0" data-price="11.28" data-ig="0" data-domain="meredithlife.com"><td class="dom">meredithlife.com <span class="star" title="Domain and handle are both free">&#9733;</span></td><td class="p yes"><span class="price">$11.28/yr</span><span class="sub">Retail $14.98/yr</span></td><td class="ig"><span class="pill pill-yes">Available</span><span class="handle">@meredithlife</span></td></tr>
+        <tr class="both" data-order="6" data-dom="0" data-price="11.28" data-ig="0" data-domain="nortoncurated.com"><td class="dom">nortoncurated.com <span class="star" title="Domain and handle are both free">&#9733;</span></td><td class="p yes"><span class="price">$11.28/yr</span><span class="sub">Retail $14.98/yr</span></td><td class="ig"><span class="pill pill-yes">Available</span><span class="handle">@nortoncurated</span></td></tr>
+        <tr class="both" data-order="7" data-dom="0" data-price="11.28" data-ig="0" data-domain="themeredithstudio.com"><td class="dom">themeredithstudio.com <span class="star" title="Domain and handle are both free">&#9733;</span></td><td class="p yes"><span class="price">$11.28/yr</span><span class="sub">Retail $14.98/yr</span></td><td class="ig"><span class="pill pill-yes">Available</span><span class="handle">@themeredithstudio</span></td></tr>
+        <tr class="both" data-order="8" data-dom="0" data-price="4975.0" data-ig="0" data-domain="curatedinteriors.com"><td class="dom">curatedinteriors.com <span class="star" title="Domain and handle are both free">&#9733;</span></td><td class="p prem"><span class="pill pill-prem">Premium</span><span class="price">$4,975.00</span><span class="sub">Renews at $18.48/yr</span></td><td class="ig"><span class="pill pill-yes">Available</span><span class="handle">@curatedinteriors</span></td></tr>
+        <tr class="" data-order="9" data-dom="0" data-price="4.98" data-ig="1" data-domain="meredith.agency"><td class="dom">meredith.agency</td><td class="p yes"><span class="price">$4.98/yr</span><span class="sub">Retail $32.48/yr</span></td><td class="ig"><span class="pill pill-no">Taken</span><span class="handle">@meredith</span><span class="sub">971 followers &middot; 293 posts</span></td></tr>
+        <tr class="" data-order="10" data-dom="0" data-price="5.98" data-ig="1" data-domain="kirbylane.co"><td class="dom">kirbylane.co</td><td class="p yes"><span class="price">$5.98/yr</span><span class="sub">Retail $38.48/yr</span></td><td class="ig"><span class="pill pill-no">Taken</span><span class="handle">@kirbylane</span><span class="sub">5 followers &middot; 8 posts</span></td></tr>
+        <tr class="" data-order="11" data-dom="0" data-price="5.98" data-ig="1" data-domain="meredithagency.co"><td class="dom">meredithagency.co</td><td class="p yes"><span class="price">$5.98/yr</span><span class="sub">Retail $38.48/yr</span></td><td class="ig"><span class="pill pill-no">Taken</span><span class="handle">@meredithagency</span><span class="sub">Meredith Model &amp; Talent Agency &middot; 4,175 followers &middot; 257 posts</span></td></tr>
+        <tr class="" data-order="12" data-dom="0" data-price="5.98" data-ig="1" data-domain="meredithdesign.co"><td class="dom">meredithdesign.co</td><td class="p yes"><span class="price">$5.98/yr</span><span class="sub">Retail $38.48/yr</span></td><td class="ig"><span class="pill pill-no">Taken</span><span class="handle">@meredithdesign</span><span class="sub">Hopen Designs &middot; 1 follower &middot; 0 posts</span></td></tr>
+        <tr class="" data-order="13" data-dom="0" data-price="5.98" data-ig="1" data-domain="meredithstudios.co"><td class="dom">meredithstudios.co</td><td class="p yes"><span class="price">$5.98/yr</span><span class="sub">Retail $38.48/yr</span></td><td class="ig"><span class="pill pill-no">Taken</span><span class="handle">@meredithstudios</span><span class="sub">Amber Meredith (child of God) &middot; 607 followers &middot; 440 posts</span></td></tr>
+        <tr class="" data-order="14" data-dom="0" data-price="11.28" data-ig="1" data-domain="curatedbymeredith.com"><td class="dom">curatedbymeredith.com</td><td class="p yes"><span class="price">$11.28/yr</span><span class="sub">Retail $14.98/yr</span></td><td class="ig"><span class="pill pill-no">Taken</span><span class="handle">@curatedbymeredith</span><span class="sub">274 followers &middot; 264 posts</span></td></tr>
+        <tr class="" data-order="15" data-dom="0" data-price="11.28" data-ig="1" data-domain="interiorcurations.com"><td class="dom">interiorcurations.com</td><td class="p yes"><span class="price">$11.28/yr</span><span class="sub">Retail $14.98/yr</span></td><td class="ig"><span class="pill pill-no">Taken</span><span class="handle">@interiorcurations</span><span class="sub">INTERIORCURATIONS &middot; 13 followers &middot; 0 posts</span></td></tr>
+        <tr class="" data-order="16" data-dom="0" data-price="11.28" data-ig="1" data-domain="luxurycurations.com"><td class="dom">luxurycurations.com</td><td class="p yes"><span class="price">$11.28/yr</span><span class="sub">Retail $14.98/yr</span></td><td class="ig"><span class="pill pill-no">Taken</span><span class="handle">@luxurycurations</span><span class="sub">Luxury Curations &middot; 21 followers &middot; 0 posts</span></td></tr>
+        <tr class="" data-order="17" data-dom="0" data-price="11.28" data-ig="1" data-domain="meredithbuilds.com"><td class="dom">meredithbuilds.com</td><td class="p yes"><span class="price">$11.28/yr</span><span class="sub">Retail $14.98/yr</span></td><td class="ig"><span class="pill pill-no">Taken</span><span class="handle">@meredithbuilds</span><span class="sub">0 followers &middot; 0 posts</span></td></tr>
+        <tr class="" data-order="18" data-dom="0" data-price="11.28" data-ig="1" data-domain="meredithcreations.com"><td class="dom">meredithcreations.com</td><td class="p yes"><span class="price">$11.28/yr</span><span class="sub">Retail $14.98/yr</span></td><td class="ig"><span class="pill pill-no">Taken</span><span class="handle">@meredithcreations</span><span class="sub">Meredith Creations &middot; 219 followers &middot; 17 posts</span></td></tr>
+        <tr class="" data-order="19" data-dom="0" data-price="11.28" data-ig="1" data-domain="meredithcurated.com"><td class="dom">meredithcurated.com</td><td class="p yes"><span class="price">$11.28/yr</span><span class="sub">Retail $14.98/yr</span></td><td class="ig"><span class="pill pill-no">Taken</span><span class="handle">@meredithcurated</span><span class="sub">Meredith Courtright &middot; 2,864 followers &middot; 498 posts</span></td></tr>
+        <tr class="" data-order="20" data-dom="0" data-price="11.28" data-ig="1" data-domain="meredithdesignlab.com"><td class="dom">meredithdesignlab.com</td><td class="p yes"><span class="price">$11.28/yr</span><span class="sub">Retail $14.98/yr</span></td><td class="ig"><span class="pill pill-no">Taken</span><span class="handle">@meredithdesignlab</span><span class="sub">Meredith Design Lab &middot; 67 followers &middot; 10 posts</span></td></tr>
+        <tr class="" data-order="21" data-dom="0" data-price="11.28" data-ig="1" data-domain="meredithstyle.com"><td class="dom">meredithstyle.com</td><td class="p yes"><span class="price">$11.28/yr</span><span class="sub">Retail $14.98/yr</span></td><td class="ig"><span class="pill pill-no">Taken</span><span class="handle">@meredithstyle</span><span class="sub">Meredith &middot; 1 follower &middot; 3 posts</span></td></tr>
+        <tr class="" data-order="22" data-dom="0" data-price="11.28" data-ig="1" data-domain="studiomln.com"><td class="dom">studiomln.com</td><td class="p yes"><span class="price">$11.28/yr</span><span class="sub">Retail $14.98/yr</span></td><td class="ig"><span class="pill pill-no">Taken</span><span class="handle">@studiomln</span><span class="sub">0 followers &middot; 0 posts</span></td></tr>
+        <tr class="" data-order="23" data-dom="0" data-price="995.0" data-ig="1" data-domain="curatedbylyn.com"><td class="dom">curatedbylyn.com</td><td class="p prem"><span class="pill pill-prem">Premium</span><span class="price">$995.00</span><span class="sub">Renews at $18.48/yr</span></td><td class="ig"><span class="pill pill-no">Taken</span><span class="handle">@curatedbylyn</span><span class="sub">Sarah &middot; 126 followers &middot; 323 posts &middot; private</span></td></tr>
+        <tr class="" data-order="24" data-dom="0" data-price="1388.0" data-ig="1" data-domain="meredithandco.com"><td class="dom">meredithandco.com</td><td class="p prem"><span class="pill pill-prem">Premium</span><span class="price">$1,388.00</span></td><td class="ig"><span class="pill pill-no">Taken</span><span class="handle">@meredithandco</span><span class="sub">Meredith and Company Salon &middot; 577 followers &middot; 810 posts</span></td></tr>
+        <tr class="" data-order="25" data-dom="0" data-price="1788.0" data-ig="1" data-domain="meredithdesign.com"><td class="dom">meredithdesign.com</td><td class="p prem"><span class="pill pill-prem">Premium</span><span class="price">$1,788.00</span><span class="sub">Renews at $18.48/yr</span></td><td class="ig"><span class="pill pill-no">Taken</span><span class="handle">@meredithdesign</span><span class="sub">Hopen Designs &middot; 1 follower &middot; 0 posts</span></td></tr>
+        <tr class="" data-order="26" data-dom="0" data-price="3480.0" data-ig="1" data-domain="luxurycreation.com"><td class="dom">luxurycreation.com</td><td class="p prem"><span class="pill pill-prem">Premium</span><span class="price">$3,480.00</span><span class="sub">Renews at $18.48/yr</span></td><td class="ig"><span class="pill pill-no">Taken</span><span class="handle">@luxurycreation</span><span class="sub">Luxxxury &middot; 0 followers &middot; 0 posts</span></td></tr>
+        <tr class="" data-order="27" data-dom="0" data-price="6000.0" data-ig="1" data-domain="meredith.co"><td class="dom">meredith.co</td><td class="p prem"><span class="pill pill-prem">Premium</span><span class="price">$6,000.00</span><span class="sub">Renews at $45.48/yr</span></td><td class="ig"><span class="pill pill-no">Taken</span><span class="handle">@meredith</span><span class="sub">971 followers &middot; 293 posts</span></td></tr>
+        <tr class="" data-order="28" data-dom="0" data-price="26995.0" data-ig="1" data-domain="curatedcollective.com"><td class="dom">curatedcollective.com</td><td class="p prem"><span class="pill pill-prem">Premium</span><span class="price">$26,995.00</span><span class="sub">or $2,249.58/mo x12</span></td><td class="ig"><span class="pill pill-no">Taken</span><span class="handle">@curatedcollective</span><span class="sub">2 followers &middot; 0 posts</span></td></tr>
+        <tr class="" data-order="29" data-dom="1" data-price="1000000000" data-ig="0" data-domain="meredithinteriors.com"><td class="dom">meredithinteriors.com</td><td class="p no"><span class="pill pill-no">Taken</span><span class="sub">Registered 2015 &middot; resale offer only</span></td><td class="ig"><span class="pill pill-yes">Available</span><span class="handle">@meredithinteriors</span></td></tr>
+        <tr class="" data-order="30" data-dom="1" data-price="1000000000" data-ig="0" data-domain="timelessdesign.co"><td class="dom">timelessdesign.co</td><td class="p no"><span class="pill pill-no">Taken</span><span class="sub">Registered 2018 &middot; resale offer only</span></td><td class="ig"><span class="pill pill-yes">Available</span><span class="handle">@timelessdesign</span></td></tr>
+        <tr class="" data-order="31" data-dom="1" data-price="1000000000" data-ig="1" data-domain="creativedesigns.com"><td class="dom">creativedesigns.com</td><td class="p no"><span class="pill pill-no">Taken</span><span class="sub">Registered 2000 &middot; resale offer only</span></td><td class="ig"><span class="pill pill-no">Taken</span><span class="handle">@creativedesigns</span><span class="sub">Creative Designs &middot; 6 followers &middot; 6 posts</span></td></tr>
+        <tr class="" data-order="32" data-dom="1" data-price="1000000000" data-ig="1" data-domain="curateddesigns.com"><td class="dom">curateddesigns.com</td><td class="p no"><span class="pill pill-no">Taken</span><span class="sub">Registered 2013 &middot; resale offer only</span></td><td class="ig"><span class="pill pill-no">Taken</span><span class="handle">@curateddesigns</span><span class="sub">1 follower &middot; 0 posts</span></td></tr>
+        <tr class="" data-order="33" data-dom="1" data-price="1000000000" data-ig="1" data-domain="curatedstudios.com"><td class="dom">curatedstudios.com</td><td class="p no"><span class="pill pill-no">Taken</span><span class="sub">Registered 2014 &middot; resale offer only</span></td><td class="ig"><span class="pill pill-no">Taken</span><span class="handle">@curatedstudios</span><span class="sub">Rudy Martinez &middot; 272 followers &middot; 161 posts</span></td></tr>
+        <tr class="" data-order="34" data-dom="1" data-price="1000000000" data-ig="1" data-domain="designcollab.com"><td class="dom">designcollab.com</td><td class="p no"><span class="pill pill-no">Taken</span><span class="sub">Registered 2002 &middot; resale offer only</span></td><td class="ig"><span class="pill pill-no">Taken</span><span class="handle">@designcollab</span><span class="sub">Danielle Stollerman &middot; 389 followers &middot; 39 posts</span></td></tr>
+        <tr class="" data-order="35" data-dom="1" data-price="1000000000" data-ig="1" data-domain="kirbylane.com"><td class="dom">kirbylane.com</td><td class="p no"><span class="pill pill-no">Taken</span><span class="sub">Registered 2021 &middot; resale offer only</span></td><td class="ig"><span class="pill pill-no">Taken</span><span class="handle">@kirbylane</span><span class="sub">5 followers &middot; 8 posts</span></td></tr>
+        <tr class="" data-order="36" data-dom="1" data-price="1000000000" data-ig="1" data-domain="meredithcollective.co"><td class="dom">meredithcollective.co</td><td class="p no"><span class="pill pill-no">Taken</span><span class="sub">Registered 2016 &middot; resale offer only</span></td><td class="ig"><span class="pill pill-no">Taken</span><span class="handle">@meredithcollective</span><span class="sub">Meredith Collective &middot; 5,347 followers &middot; 13 posts</span></td></tr>
+        <tr class="" data-order="37" data-dom="1" data-price="1000000000" data-ig="1" data-domain="mlndesign.com"><td class="dom">mlndesign.com</td><td class="p no"><span class="pill pill-no">Taken</span><span class="sub">Registered 2012 &middot; resale offer only</span></td><td class="ig"><span class="pill pill-no">Taken</span><span class="handle">@mlndesign</span><span class="sub">MLN design &middot; 44 followers &middot; 56 posts</span></td></tr>
+        <tr class="" data-order="38" data-dom="1" data-price="1000000000" data-ig="1" data-domain="mlnstudio.com"><td class="dom">mlnstudio.com</td><td class="p no"><span class="pill pill-no">Taken</span><span class="sub">Already registered &middot; resale offer only</span></td><td class="ig"><span class="pill pill-no">Taken</span><span class="handle">@mlnstudio</span><span class="sub">MLN STUDIO &middot; 792 followers &middot; 325 posts</span></td></tr>
+        <tr class="" data-order="39" data-dom="1" data-price="1000000000" data-ig="1" data-domain="studiomeredith.com"><td class="dom">studiomeredith.com</td><td class="p no"><span class="pill pill-no">Taken</span><span class="sub">Registered 2025 &middot; resale offer only</span></td><td class="ig"><span class="pill pill-no">Taken</span><span class="handle">@studiomeredith</span><span class="sub">Studio Meredith &middot; 180 followers &middot; 24 posts</span></td></tr>
+        <tr class="" data-order="40" data-dom="1" data-price="1000000000" data-ig="1" data-domain="timelesscurations.com"><td class="dom">timelesscurations.com</td><td class="p no"><span class="pill pill-no">Taken</span><span class="sub">Registered 2024 &middot; resale offer only</span></td><td class="ig"><span class="pill pill-no">Taken</span><span class="handle">@timelesscurations</span><span class="sub">Timeless Curations &middot; 2 followers &middot; 0 posts</span></td></tr>
+        <tr class="" data-order="41" data-dom="1" data-price="1000000000" data-ig="2" data-domain="timelessinteriors.com"><td class="dom">timelessinteriors.com</td><td class="p no"><span class="pill pill-no">Taken</span><span class="sub">Registered 2001 &middot; resale offer only</span></td><td class="ig"><span class="pill pill-unk">Unverified</span><span class="handle">@timelessinteriors</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <footer>
+    <p><strong>Pricing:</strong> first-year registration price quoted by Namecheap, before the ICANN fee (about $0.18 on gTLDs) and any tax. Renewal prices are shown beneath where they differ. Premium names are registry or aftermarket inventory sold at a one-time price, then renewed at the rate shown.</p>
+    <p><strong>Instagram:</strong> checked against Instagram&rsquo;s public profile endpoint. &ldquo;Available&rdquo; means no profile currently resolves at that handle. Instagram reserves the right to withhold handles, and dormant or deactivated accounts can still hold a name, so confirm at signup.</p>
+    <p>Checked August 18, 2026. Prices and availability move daily. Re-verify before purchasing.</p>
+  </footer>
+</div>
+
+<script>
+(function () {
+  var tb = document.getElementById('tb');
+  var rows = Array.prototype.slice.call(tb.rows);
+  var countEl = document.getElementById('count');
+  var sortBtns = Array.prototype.slice.call(document.querySelectorAll('[data-sort]'));
+  var filterBtns = Array.prototype.slice.call(document.querySelectorAll('[data-filter]'));
+  var TH = { domain: 'th-domain', price: 'th-price', ig: 'th-ig' };
+
+  var keys = {
+    'default': function (r) { return +r.dataset.order; },
+    'domain':  function (r) { return r.dataset.domain; },
+    'price':   function (r) { return +r.dataset.price; },
+    'dom':     function (r) { return +r.dataset.dom; },
+    'ig':      function (r) { return +r.dataset.ig; }
+  };
+
+  var activeSort = 'default';
+  var activeFilter = 'all';
+  var dirs = { 'default': 1, 'domain': 1, 'price': 1, 'dom': 1, 'ig': 1 };
+
+  function render() {
+    var key = keys[activeSort];
+    var dir = dirs[activeSort];
+    rows.slice().sort(function (a, b) {
+      var x = key(a), y = key(b), c;
+      if (activeSort === 'price') {
+        // domains with no purchase price stay at the bottom in both directions
+        var xn = x >= 1e8, yn = y >= 1e8;
+        if (xn !== yn) return xn ? 1 : -1;
+        if (xn && yn) return (+a.dataset.order) - (+b.dataset.order);
+      }
+      if (typeof x === 'string') {
+        c = x.localeCompare(y);
+      } else {
+        c = (x === y) ? 0 : (x < y ? -1 : 1);
+      }
+      if (c !== 0) return c * dir;
+      return (+a.dataset.order) - (+b.dataset.order);
+    }).forEach(function (r) { tb.appendChild(r); });
+
+    var shown = 0;
+    rows.forEach(function (r) {
+      var ok = activeFilter === 'all'
+        || (activeFilter === 'both' && r.dataset.dom === '0' && r.dataset.ig === '0')
+        || (activeFilter === 'domain' && r.dataset.dom === '0')
+        || (activeFilter === 'handle' && r.dataset.ig === '0');
+      r.classList.toggle('hide', !ok);
+      if (ok) shown++;
+    });
+    countEl.textContent = shown === rows.length
+      ? rows.length + ' names'
+      : 'Showing ' + shown + ' of ' + rows.length;
+
+    sortBtns.forEach(function (b) {
+      var mine = b.getAttribute('data-sort') === activeSort;
+      b.setAttribute('aria-pressed', mine ? 'true' : 'false');
+      var a = b.querySelector('.arrow');
+      if (a) a.textContent = mine ? (dirs[activeSort] === 1 ? '▲' : '▼') : '';
+    });
+    filterBtns.forEach(function (b) {
+      b.setAttribute('aria-pressed', b.getAttribute('data-filter') === activeFilter ? 'true' : 'false');
+    });
+    Object.keys(TH).forEach(function (k) {
+      var th = document.getElementById(TH[k]);
+      if (!th) return;
+      if (k === activeSort) th.setAttribute('aria-sort', dirs[k] === 1 ? 'ascending' : 'descending');
+      else th.removeAttribute('aria-sort');
+    });
+  }
+
+  sortBtns.forEach(function (b) {
+    b.addEventListener('click', function () {
+      var s = b.getAttribute('data-sort');
+      if (s === activeSort) dirs[s] = -dirs[s];
+      else activeSort = s;
+      render();
+    });
+  });
+
+  filterBtns.forEach(function (b) {
+    b.addEventListener('click', function () {
+      activeFilter = b.getAttribute('data-filter');
+      render();
+    });
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>
